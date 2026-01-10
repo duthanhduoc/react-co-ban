@@ -3,7 +3,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import HelloWorld from './HelloWorld'
-
+import { HelloKitty } from './HelloWorld'
 function App() {
   const [count, setCount] = useState(0)
 
@@ -22,6 +22,7 @@ function App() {
         </a>
       </div>
       <h1>React 2026 by Dư Thanh Được</h1>
+      <HelloKitty />
       <HelloWorld />
       <HelloWorld />
       <HelloWorld />
