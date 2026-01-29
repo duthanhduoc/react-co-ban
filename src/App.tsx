@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import HelloWorld from './HelloWorld'
-import { HelloKitty } from './HelloWorld'
+
 function App() {
   const [count, setCount] = useState(0)
-
+  const obj = {
+    title: 'React 2026 by Dư Thanh Được',
+    subTitle: 'Learning React with Vite',
+  }
+  const href = 'https://react.dev'
   useEffect(() => {
     console.log(count)
   }, [])
@@ -14,18 +17,23 @@ function App() {
   return (
     <>
       <div>
-        <a href='https://vite.dev' target='_blank'>
+        <a
+          href='https://vite.dev'
+          target='_blank'
+          style={{
+            width: '100px',
+            height: '100px',
+            borderRadius: '50%',
+          }}
+        >
           <img src={viteLogo} className='logo' alt='Vite logo' />
         </a>
-        <a href='https://react.dev' target='_blank'>
+        <a href={href} target='_blank'>
           <img src={reactLogo} className='logo react' alt='React logo' />
         </a>
       </div>
-      <h1>React 2026 by Dư Thanh Được</h1>
-      <HelloKitty />
-      <HelloWorld />
-      <HelloWorld />
-      <HelloWorld />
+      <h1>{obj.title}</h1>
+      <h2>{obj.subTitle}</h2>
       <div className='card'>
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
