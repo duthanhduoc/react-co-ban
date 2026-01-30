@@ -1,19 +1,31 @@
 import './App.css'
-import HelloWorld from './HelloWorld'
-import Layout from './Layout'
+// truthy: số khác 0, string khác rỗng, true, object, array
+// falsy: 0, '', false, null, undefined, NaN
+function Item({ name, isPacked }: { name: string; isPacked: boolean }) {
+  return (
+    <li className='item'>
+      {name}
+      {isPacked && '✅'}
+    </li>
+  )
+}
 
+function PackingList() {
+  return (
+    <section>
+      <h1>Sally Ride's Packing List</h1>
+      <ul>
+        <Item isPacked={true} name='Space suit' />
+        <Item isPacked={true} name='Helmet with a golden leaf' />
+        <Item isPacked={false} name='Photo of Tam' />
+      </ul>
+    </section>
+  )
+}
 function App() {
-  const title = 'Hello App Component'
   return (
     <>
-      <Layout>
-        <p>Welcome to React with TypeScript and Vite - by DU THANH DUOC</p>
-        <HelloWorld
-          title1={title}
-          title2='Hi DU THANH DUOC'
-          title3='Tam Biet'
-        />
-      </Layout>
+      <PackingList />
     </>
   )
 }
