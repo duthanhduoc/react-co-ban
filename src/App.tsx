@@ -1,32 +1,30 @@
+import { Fragment } from 'react/jsx-runtime'
 import './App.css'
-// truthy: số khác 0, string khác rỗng, true, object, array
-// falsy: 0, '', false, null, undefined, NaN
-function Item({ name, isPacked }: { name: string; isPacked: boolean }) {
-  return (
-    <li className='item'>
-      {name}
-      {isPacked && '✅'}
-    </li>
-  )
-}
 
-function PackingList() {
-  return (
-    <section>
-      <h1>Sally Ride's Packing List</h1>
-      <ul>
-        <Item isPacked={true} name='Space suit' />
-        <Item isPacked={true} name='Helmet with a golden leaf' />
-        <Item isPacked={false} name='Photo of Tam' />
-      </ul>
-    </section>
-  )
-}
+const people = [
+  'Creola Katherine Johnson: mathematician',
+  'Subrahmanyan Chandrasekhar: astrophysicist',
+  'Mario José Molina-Pasquel Henríquez: chemist',
+  'Mohammad Abdus Salam: physicist',
+  'Percy Lavon Julian: chemist',
+  'Subrahmanyan Chandrasekhar: astrophysicist',
+]
+
 function App() {
   return (
-    <>
-      <PackingList />
-    </>
+    <ul>
+      {people.map((person, index) => (
+        <Fragment key={index}>
+          <div>Số thứ tự: {index + 1}</div>
+          <li>{person}</li>
+        </Fragment>
+      ))}
+      {/* <li>Creola Katherine Johnson: mathematician</li>
+      <li>Mario José Molina-Pasquel Henríquez: chemist</li>
+      <li>Mohammad Abdus Salam: physicist</li>
+      <li>Percy Lavon Julian: chemist</li>
+      <li>Subrahmanyan Chandrasekhar: astrophysicist</li> */}
+    </ul>
   )
 }
 
