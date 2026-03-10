@@ -1,11 +1,16 @@
+import { useState } from 'react'
+
 export default function App() {
-  // Currying function
-  const handleClick = () => () => {
-    alert('Button clicked!')
-  }
+  const [value, setValue] = useState('')
+  console.log('App render')
   return (
     <div className='App'>
-      <button onClick={handleClick}>Click me</button>
+      <input
+        type='text'
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      <h3>Value Input: {value}</h3>
     </div>
   )
 }
