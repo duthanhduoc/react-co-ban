@@ -1,16 +1,19 @@
 import { useState } from 'react'
 
 export default function App() {
-  const [value, setValue] = useState('')
-  console.log('App render')
+  const [number, setNumber] = useState(0)
+  console.log('App rendered')
   return (
-    <div className='App'>
-      <input
-        type='text'
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
-      <h3>Value Input: {value}</h3>
-    </div>
+    <>
+      <h1>{number}</h1>
+      <button
+        onClick={() => {
+          setNumber(number + 3)
+          alert(number)
+        }}
+      >
+        +3
+      </button>
+    </>
   )
 }
