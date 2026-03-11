@@ -1,19 +1,56 @@
 import { useState } from 'react'
 
 export default function App() {
-  const [number, setNumber] = useState(0)
-  console.log('App rendered')
+  const [person, setPerson] = useState({
+    name: 'Dư Thanh Được',
+    position: {
+      title: 'Giám đốc',
+      salary: 1000000,
+    },
+  })
+
+  const handleChangeName = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    const newPerson = { ...person }
+    newPerson.name = value
+    setPerson(newPerson)
+  }
+
+  const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+
+    const newPerson = {
+      ...person,
+      position: { ...person.position, title: value },
+    }
+    setPerson(newPerson)
+  }
+
+  const handleChangeSalary = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+
+    const newPerson = {
+      ...person,
+      position: { ...person.position, salary: Number(value) },
+    }
+    setPerson(newPerson)
+  }
+
   return (
-    <>
-      <h1>{number}</h1>
-      <button
-        onClick={() => {
-          setNumber(number + 3)
-          alert(number)
-        }}
-      >
-        +3
-      </button>
-    </>
+    <div>
+      <form>
+        <input value={person.name} name='name' onChange={handleChangeName} />
+        <input
+          value={person.position.title}
+          name='title'
+          onChange={handleChangeTitle}
+        />
+        <input
+          value={person.position.salary}
+          name='salary'
+          onChange={handleChangeSalary}
+        />
+      </form>
+    </div>
   )
 }
