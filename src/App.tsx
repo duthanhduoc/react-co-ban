@@ -1,56 +1,48 @@
 import { useState } from 'react'
 
+type Artist = {
+  id: string
+  name: string
+}
+
 export default function App() {
-  const [person, setPerson] = useState({
-    name: 'Dư Thanh Được',
-    position: {
-      title: 'Giám đốc',
-      salary: 1000000,
-    },
-  })
+  const [name, setName] = useState('')
+  const [artists, setArtists] = useState<Artist[]>([])
 
-  const handleChangeName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    const newPerson = { ...person }
-    newPerson.name = value
-    setPerson(newPerson)
-  }
+  console.log('artists', artists)
 
-  const handleChangeTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-
-    const newPerson = {
-      ...person,
-      position: { ...person.position, title: value },
-    }
-    setPerson(newPerson)
-  }
-
-  const handleChangeSalary = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-
-    const newPerson = {
-      ...person,
-      position: { ...person.position, salary: Number(value) },
-    }
-    setPerson(newPerson)
+  const handleRemoveArtist = (artistId: string) => () => {
+    const newArtists = artists.filter((artist) => artist.id !== artistId)
+    setArtists(newArtists)
   }
 
   return (
-    <div>
-      <form>
-        <input value={person.name} name='name' onChange={handleChangeName} />
-        <input
-          value={person.position.title}
-          name='title'
-          onChange={handleChangeTitle}
-        />
-        <input
-          value={person.position.salary}
-          name='salary'
-          onChange={handleChangeSalary}
-        />
-      </form>
-    </div>
+    <>
+      <h1>Inspiring sculptors:</h1>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <button
+        onClick={() => {
+          // 🚫
+          // artists.push({ id: artists.length + 1, name })
+          // setArtists(artists)
+
+          // ✅
+          const newArtists = [...artists]
+          newArtists.push({ id: new Date().toISOString(), name })
+          setArtists(newArtists)
+          setName('')
+        }}
+      >
+        Add
+      </button>
+      <ul>
+        {artists.map((artist) => (
+          <li key={artist.id}>
+            <span>{artist.name}</span>
+            <button onClick={handleRemoveArtist(artist.id)}>⛔️</button>
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
