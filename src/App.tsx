@@ -1,26 +1,32 @@
-import { useRef } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function App() {
-  const ref1 = useRef<HTMLVideoElement | null>(null)
+  const [count, setCount] = useState(0)
+  const [show, setShow] = useState(true)
 
-  const play = () => {
-    console.log(ref1)
-    ref1.current?.play()
-  }
+  // useEffect(() => {
+  //   // Effect sẽ chạy 1 lần duy nhất sau khi component được render lần đầu tiên
+  //   // Đa số 90% trường hợp sẽ dùng để fetch API
+  //   console.log('Chỉ log 1 lần duy nhất thôi')
+  // }, [])
 
-  const pause = () => {
-    ref1.current?.pause()
-  }
+  // useEffect(() => {
+  //   // Effect sẽ chạy mỗi khi component được render lại
+  //   // Trường hợp này hiếm khi được sử dụng
+  //   console.log('Log mỗi khi component được render lại, kể cả lần đầu tiên')
+  // })
+
+  useEffect(() => {
+    // Chạy sau khi App Component render lần đầu tiên
+    // Và chạy sau khi mỗi lần show thay đổi
+    console.log('Hehe')
+  }, [show, count])
+
+  console.log('Render')
   return (
     <div>
-      <video id='video1' width='420' ref={ref1}>
-        <source src='/video.mp4' type='video/mp4' />
-        Your browser does not support HTML video.
-      </video>
-      <div>
-        <button onClick={play}>Play</button>
-        <button onClick={pause}>Pause</button>
-      </div>
+      <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+      <button onClick={() => setShow(!show)}>Show: {show.toString()}</button>
     </div>
   )
 }
