@@ -23,3 +23,8 @@
 .header {
   background: rgb(180, 180, 255);
 }
+
+.active {
+  font-weight: bold;
+  color: blue;
+}
