@@ -1,9 +1,10 @@
 import { Button, Card } from '@heroui/react'
 import { useState } from 'react'
-import http from '../lib/http'
 import { useNavigate } from 'react-router'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
+  const { login } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -14,12 +15,7 @@ export default function Login() {
     if (!isLoading) {
       setIsLoading(true)
       try {
-        const res = await http.post('http://localhost:3000/api/auth/login', {
-          username,
-          password
-        })
-        localStorage.setItem('accessToken', res.data.accessToken)
-        localStorage.setItem('refreshToken', res.data.refreshToken)
+        await login(username, password)
         navigate('/products')
       } catch (error) {
         console.log(error)
