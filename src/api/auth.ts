@@ -7,5 +7,11 @@ export const authApi = {
       password
     })
     return data
+  },
+  logout: async (refreshToken: string) => {
+    const { data } = await http.post('/auth/logout', {
+      refreshToken
+    })
+    return data
   }
 }

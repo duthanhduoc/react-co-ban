@@ -1,7 +1,14 @@
-import { Outlet } from 'react-router'
+import { Outlet, useNavigate } from 'react-router'
 import { Button } from '@heroui/react'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Layout() {
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
   return (
     <div className='min-h-screen bg-gray-50'>
       <header className='border-b bg-white px-6 py-3 flex items-center justify-between'>
@@ -12,7 +19,7 @@ export default function Layout() {
           <span className='text-sm text-gray-500'>
             Hello, <span className='font-medium text-gray-800'>admin</span>
           </span>
-          <Button variant='danger-soft' size='sm'>
+          <Button variant='danger-soft' size='sm' onClick={handleLogout}>
             Logout
           </Button>
         </div>
