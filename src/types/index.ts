@@ -4,6 +4,12 @@ export interface User {
   created_at: string
 }
 
+export interface RefreshTokenResponse {
+  accessToken: string
+  refreshToken: string
+  message: string
+}
+
 export interface Product {
   id: number
   name: string
