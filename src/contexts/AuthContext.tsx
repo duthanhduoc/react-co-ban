@@ -27,7 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     enabled: isAuthenticated
   })
 
-  console.log(user)
   const login = async (username: string, password: string) => {
     const data = await authApi.login(username, password)
     localStorage.setItem('accessToken', data.accessToken)

@@ -11,7 +11,8 @@ import {
   TableRow,
   TableCell
 } from '@heroui/react'
-import { mockProducts } from '../../data/products'
+import { useQuery } from '@tanstack/react-query'
+import { productsApi } from '../../api/products'
 
 const SORT_OPTIONS = [
   { value: 'created_at', label: 'Date Created' },
@@ -21,9 +22,14 @@ const SORT_OPTIONS = [
 ]
 
 const LIMIT = 10
-const displayedProducts = mockProducts.slice(0, LIMIT)
 
 export default function ProductsPage() {
+  const { data } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => productsApi.getProducts()
+  })
+  const products = data?.data ?? []
+  const totalProducts = data?.pagination.total ?? 0
   return (
     <div>
       {/* Header */}
@@ -31,7 +37,7 @@ export default function ProductsPage() {
         <div>
           <h1 className='text-2xl font-bold text-gray-900'>Products</h1>
           <p className='text-sm text-gray-500 mt-1'>
-            {mockProducts.length} total products
+            {totalProducts} total products
           </p>
         </div>
         <Button variant='primary'>+ Add Product</Button>
@@ -77,7 +83,7 @@ export default function ProductsPage() {
               <TableColumn id='actions'>ACTIONS</TableColumn>
             </TableHeader>
             <TableBody>
-              {displayedProducts.map((product) => (
+              {products.map((product) => (
                 <TableRow key={product.id} id={product.id}>
                   <TableCell>
                     <div className='w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400'>
@@ -140,7 +146,7 @@ export default function ProductsPage() {
       <div className='mt-6'>
         <Pagination className='w-full'>
           <Pagination.Summary>
-            Showing 1–{LIMIT} of {mockProducts.length} results
+            Showing 1–{LIMIT} of {totalProducts} results
           </Pagination.Summary>
           <Pagination.Content>
             <Pagination.Item>
