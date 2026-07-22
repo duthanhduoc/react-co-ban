@@ -27,3 +27,8 @@ export interface Pagination {
   limit: number
   totalPages: number
 }
+
+export interface ProductsResponse {
+  data: Product[]
+  pagination: Pagination
+}
