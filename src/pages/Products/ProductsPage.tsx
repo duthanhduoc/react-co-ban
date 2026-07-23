@@ -13,6 +13,7 @@ import {
 } from '@heroui/react'
 import { useQuery } from '@tanstack/react-query'
 import { productsApi } from '../../api/products'
+import { useSearchParams } from 'react-router'
 
 const SORT_OPTIONS = [
   { value: 'created_at', label: 'Date Created' },
@@ -24,12 +25,38 @@ const SORT_OPTIONS = [
 const LIMIT = 10
 
 export default function ProductsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('page') ?? 1)
   const { data } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => productsApi.getProducts()
+    queryKey: ['products', { page, limit: LIMIT }],
+    queryFn: () =>
+      productsApi.getProducts({
+        page,
+        limit: LIMIT
+      })
   })
   const products = data?.data ?? []
   const totalProducts = data?.pagination.total ?? 0
+  const totalPages = data?.pagination.totalPages ?? 0
+
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = []
+    pages.push(1)
+    if (page > 3) {
+      pages.push('ellipsis')
+    }
+    const start = Math.max(2, page - 1)
+    const end = Math.min(totalPages - 1, page + 1)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page < totalPages - 2) {
+      pages.push('ellipsis')
+    }
+    pages.push(totalPages)
+    return pages
+  }
+
   return (
     <div>
       {/* Header */}
@@ -146,23 +173,40 @@ export default function ProductsPage() {
       <div className='mt-6'>
         <Pagination className='w-full'>
           <Pagination.Summary>
-            Showing 1–{LIMIT} of {totalProducts} results
+            Showing {Math.min((page - 1) * LIMIT + 1, totalProducts)}–
+            {Math.min(page * LIMIT, totalProducts)} of {totalProducts} results
           </Pagination.Summary>
           <Pagination.Content>
             <Pagination.Item>
-              <Pagination.Previous isDisabled>
+              <Pagination.Previous
+                isDisabled={page === 1}
+                onPress={() => setSearchParams({ page: String(page - 1) })}
+              >
                 <Pagination.PreviousIcon />
                 <span>Previous</span>
               </Pagination.Previous>
             </Pagination.Item>
+            {getPageNumbers().map((p, i) =>
+              p === 'ellipsis' ? (
+                <Pagination.Item key={`ellipsis-${i}`}>
+                  <Pagination.Ellipsis />
+                </Pagination.Item>
+              ) : (
+                <Pagination.Item key={p}>
+                  <Pagination.Link
+                    isActive={p === page}
+                    onPress={() => setSearchParams({ page: String(p) })}
+                  >
+                    {p}
+                  </Pagination.Link>
+                </Pagination.Item>
+              )
+            )}
             <Pagination.Item>
-              <Pagination.Link isActive>1</Pagination.Link>
-            </Pagination.Item>
-            <Pagination.Item>
-              <Pagination.Link>2</Pagination.Link>
-            </Pagination.Item>
-            <Pagination.Item>
-              <Pagination.Next>
+              <Pagination.Next
+                isDisabled={page >= totalPages}
+                onPress={() => setSearchParams({ page: String(page + 1) })}
+              >
                 <span>Next</span>
                 <Pagination.NextIcon />
               </Pagination.Next>
