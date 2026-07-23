@@ -12,8 +12,9 @@ import {
   TableCell
 } from '@heroui/react'
 import { useQuery } from '@tanstack/react-query'
-import { productsApi } from '../../api/products'
+import { productsApi, type ProductsQuery } from '../../api/products'
 import { useSearchParams } from 'react-router'
+import { useRef, useState } from 'react'
 
 const SORT_OPTIONS = [
   { value: 'created_at', label: 'Date Created' },
@@ -27,12 +28,28 @@ const LIMIT = 10
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
+  const searchFromUrl = searchParams.get('search') ?? ''
+  const sortBy = (searchParams.get('sortBy') ?? 'created_at') as NonNullable<
+    ProductsQuery['sort_by']
+  >
+  const order = (searchParams.get('order') ?? 'desc') as NonNullable<
+    ProductsQuery['order']
+  >
+  const [searchInput, setSearchInput] = useState(searchFromUrl)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const { data } = useQuery({
-    queryKey: ['products', { page, limit: LIMIT }],
+    queryKey: [
+      'products',
+      { page, limit: LIMIT, search: searchFromUrl, order, sortBy }
+    ],
     queryFn: () =>
       productsApi.getProducts({
         page,
-        limit: LIMIT
+        limit: LIMIT,
+        search: searchFromUrl,
+        order,
+        sort_by: sortBy
       })
   })
   const products = data?.data ?? []
@@ -57,6 +74,31 @@ export default function ProductsPage() {
     return pages
   }
 
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchInput(value)
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current)
+    }
+    searchTimerRef.current = setTimeout(() => {
+      updateParams({ page: '1', search: value })
+    }, 500)
+  }
+
+  const updateParams = (updates: Record<string, string | null>) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null) {
+          next.delete(key)
+        } else {
+          next.set(key, value)
+        }
+      })
+      return next
+    })
+  }
+
   return (
     <div>
       {/* Header */}
@@ -76,10 +118,19 @@ export default function ProductsPage() {
           type='text'
           placeholder='Search by name...'
           className='border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 max-w-xs w-full'
+          value={searchInput}
+          onChange={handleSearchInputChange}
         />
         <select
           defaultValue='created_at'
           className='border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white'
+          value={sortBy}
+          onChange={(e) =>
+            updateParams({
+              page: '1',
+              sortBy: e.target.value
+            })
+          }
         >
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -87,8 +138,17 @@ export default function ProductsPage() {
             </option>
           ))}
         </select>
-        <Button variant='outline' size='sm'>
-          ↓ Descending
+        <Button
+          variant='outline'
+          size='sm'
+          onPress={() =>
+            updateParams({
+              page: '1',
+              order: order === 'asc' ? 'desc' : 'asc'
+            })
+          }
+        >
+          {order === 'asc' ? '↑ Ascending' : '↓ Descending'}
         </Button>
       </div>
 
