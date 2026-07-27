@@ -9,9 +9,18 @@ import {
   TableColumn,
   TableBody,
   TableRow,
-  TableCell
+  TableCell,
+  ModalRoot,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalHeading,
+  ModalBody,
+  ModalFooter,
+  useOverlayState
 } from '@heroui/react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productsApi, type ProductsQuery } from '../../api/products'
 import { useSearchParams } from 'react-router'
 import { useRef, useState } from 'react'
@@ -24,8 +33,22 @@ const SORT_OPTIONS = [
 ]
 
 const LIMIT = 10
+const inputCls =
+  'border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 w-full'
+
+const inputErrCls =
+  'border border-red-400 bg-red-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-red-400 w-full'
 
 export default function ProductsPage() {
+  const qc = useQueryClient()
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock: ''
+  })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const createState = useOverlayState()
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
   const searchFromUrl = searchParams.get('search') ?? ''
@@ -52,6 +75,11 @@ export default function ProductsPage() {
         sort_by: sortBy
       })
   })
+
+  const createProductMutation = useMutation({
+    mutationFn: productsApi.createProduct
+  })
+
   const products = data?.data ?? []
   const totalProducts = data?.pagination.total ?? 0
   const totalPages = data?.pagination.totalPages ?? 0
@@ -98,6 +126,27 @@ export default function ProductsPage() {
       return next
     })
   }
+  const handleCreateProduct = async () => {
+    await createProductMutation.mutateAsync({
+      name: form.name,
+      description: form.description,
+      price: Number(form.price) || 0,
+      stock: Number(form.stock) || 0
+    })
+    resetForm()
+    createState.close()
+    qc.invalidateQueries({ queryKey: ['products'] })
+  }
+
+  const resetForm = () => {
+    setForm({
+      name: '',
+      description: '',
+      price: '',
+      stock: ''
+    })
+    setFormErrors({})
+  }
 
   return (
     <div>
@@ -109,7 +158,9 @@ export default function ProductsPage() {
             {totalProducts} total products
           </p>
         </div>
-        <Button variant='primary'>+ Add Product</Button>
+        <Button variant='primary' onPress={createState.open}>
+          + Add Product
+        </Button>
       </div>
 
       {/* Filters */}
@@ -122,7 +173,6 @@ export default function ProductsPage() {
           onChange={handleSearchInputChange}
         />
         <select
-          defaultValue='created_at'
           className='border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white'
           value={sortBy}
           onChange={(e) =>
@@ -274,6 +324,118 @@ export default function ProductsPage() {
           </Pagination.Content>
         </Pagination>
       </div>
+
+      {/* Create Product Modal */}
+      <ModalRoot state={createState}>
+        <ModalBackdrop>
+          <ModalContainer>
+            <ModalDialog>
+              <ModalHeader>
+                <ModalHeading>Add New Product</ModalHeading>
+              </ModalHeader>
+              <ModalBody>
+                <div className='flex flex-col gap-4'>
+                  <div className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      Name <span className='text-red-500'>*</span>
+                    </label>
+                    <input
+                      type='text'
+                      placeholder='Product name'
+                      className={inputCls}
+                      value={form.name}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                    />
+                    <p className='text-xs text-red-500'>Error message</p>
+                  </div>
+                  <div className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      Image
+                    </label>
+                    <input
+                      type='file'
+                      placeholder='Upload image'
+                      className={inputCls}
+                      accept='image/*'
+                    />
+                    <p className='text-xs text-red-500'>Error message</p>
+                    <div>
+                      <img
+                        alt='Preview'
+                        className='w-[150px] h-[150px] rounded-lg object-cover'
+                      />
+                    </div>
+                  </div>
+                  <div className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      Description
+                    </label>
+                    <input
+                      type='text'
+                      placeholder='Optional description'
+                      className={inputCls}
+                      value={form.description}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          description: e.target.value
+                        }))
+                      }
+                    />
+                    <p className='text-xs text-red-500'>Error message</p>
+                  </div>
+                  <div className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      Price <span className='text-red-500'>*</span>
+                    </label>
+                    <input
+                      type='number'
+                      placeholder='0.00'
+                      className={inputCls}
+                      value={form.price}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, price: e.target.value }))
+                      }
+                    />
+                    <p className='text-xs text-red-500'>Error message</p>
+                  </div>
+                  <div className='flex flex-col gap-1'>
+                    <label className='text-sm font-medium text-gray-700'>
+                      Stock
+                    </label>
+                    <input
+                      type='number'
+                      placeholder='0'
+                      className={inputCls}
+                      value={form.stock}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, stock: e.target.value }))
+                      }
+                    />
+                    <p className='text-xs text-red-500'>Error message</p>
+                  </div>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  variant='ghost'
+                  onPress={() => {
+                    resetForm()
+                    createState.close()
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button variant='primary' onPress={handleCreateProduct}>
+                  Create Product
+                </Button>
+              </ModalFooter>
+            </ModalDialog>
+          </ModalContainer>
+        </ModalBackdrop>
+      </ModalRoot>
     </div>
   )
 }

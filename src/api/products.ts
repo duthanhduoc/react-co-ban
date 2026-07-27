@@ -1,5 +1,5 @@
 import http from '../lib/http'
-import type { ProductsResponse } from '../types'
+import type { Product, ProductsResponse } from '../types'
 
 export interface ProductsQuery {
   page?: number
@@ -9,9 +9,24 @@ export interface ProductsQuery {
   order?: 'asc' | 'desc'
 }
 
+interface CreateProductBody {
+  name: string
+  price: number
+  stock?: number
+  description?: string
+}
+
 export const productsApi = {
   getProducts: async (params: ProductsQuery = {}) => {
     const { data } = await http.get<ProductsResponse>('/products', { params })
     return data
+  },
+  createProduct: async (product: CreateProductBody) => {
+    const { data } = await http.post<{ data: Product }>(
+      '/products',
+      product,
+      {}
+    )
+    return data.data
   }
 }
