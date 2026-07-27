@@ -21,9 +21,14 @@ import {
   useOverlayState
 } from '@heroui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { productsApi, type ProductsQuery } from '../../api/products'
+import axios from 'axios'
+import {
+  productsApi,
+  type CreateProductBody,
+  type ProductsQuery
+} from '../../api/products'
 import { useSearchParams } from 'react-router'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const SORT_OPTIONS = [
   { value: 'created_at', label: 'Date Created' },
@@ -39,6 +44,9 @@ const inputCls =
 const inputErrCls =
   'border border-red-400 bg-red-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-red-400 w-full'
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+
 export default function ProductsPage() {
   const qc = useQueryClient()
   const [form, setForm] = useState({
@@ -48,6 +56,9 @@ export default function ProductsPage() {
     stock: ''
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const createState = useOverlayState()
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
@@ -60,6 +71,14 @@ export default function ProductsPage() {
   >
   const [searchInput, setSearchInput] = useState(searchFromUrl)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const previewUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    }
+  }, [])
 
   const { data } = useQuery({
     queryKey: [
@@ -77,7 +96,18 @@ export default function ProductsPage() {
   })
 
   const createProductMutation = useMutation({
-    mutationFn: productsApi.createProduct
+    mutationFn: async ({
+      product,
+      image
+    }: {
+      product: CreateProductBody
+      image: File | null
+    }) => {
+      const imageUrl = image
+        ? await productsApi.uploadProductImage(image)
+        : undefined
+      return productsApi.createProduct({ ...product, image: imageUrl })
+    }
   })
 
   const products = data?.data ?? []
@@ -126,16 +156,93 @@ export default function ProductsPage() {
       return next
     })
   }
-  const handleCreateProduct = async () => {
-    await createProductMutation.mutateAsync({
-      name: form.name,
-      description: form.description,
-      price: Number(form.price) || 0,
-      stock: Number(form.stock) || 0
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null
+    if (!file) return
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageFile(null)
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+      setImagePreview(null)
+      setFormErrors((prev) => ({
+        ...prev,
+        image: 'Only JPEG, PNG, WebP, and GIF images are allowed.'
+      }))
+      event.target.value = ''
+      return
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setImageFile(null)
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+      setImagePreview(null)
+      setFormErrors((prev) => ({
+        ...prev,
+        image: 'Image size must not exceed 5 MB.'
+      }))
+      event.target.value = ''
+      return
+    }
+
+    setImageFile(file)
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    const previewUrl = URL.createObjectURL(file)
+    previewUrlRef.current = previewUrl
+    setImagePreview(previewUrl)
+    setFormErrors((prev) => {
+      const next = { ...prev }
+      delete next.image
+      return next
     })
-    resetForm()
-    createState.close()
-    qc.invalidateQueries({ queryKey: ['products'] })
+  }
+
+  const handleCreateProduct = async () => {
+    const errors: Record<string, string> = {}
+    const price = Number(form.price)
+    const stock = form.stock === '' ? 0 : Number(form.stock)
+
+    if (!form.name.trim()) errors.name = 'Name is required.'
+    if (!form.price.trim()) {
+      errors.price = 'Price is required.'
+    } else if (!Number.isFinite(price) || price < 0) {
+      errors.price = 'Price must be a non-negative number.'
+    }
+    if (!Number.isFinite(stock) || stock < 0) {
+      errors.stock = 'Stock must be a non-negative number.'
+    }
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+
+    setFormErrors({})
+    setSubmitError('')
+    try {
+      await createProductMutation.mutateAsync({
+        product: {
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          price,
+          stock
+        },
+        image: imageFile
+      })
+      resetForm()
+      createState.close()
+      qc.invalidateQueries({ queryKey: ['products'] })
+    } catch (error) {
+      if (axios.isAxiosError<{ errors?: Record<string, string>; error?: string }>(error)) {
+        const apiErrors = error.response?.data?.errors
+        if (apiErrors) {
+          setFormErrors(apiErrors)
+          return
+        }
+        setSubmitError(error.response?.data?.error ?? 'Unable to create product. Please try again.')
+        return
+      }
+      setSubmitError('Unable to create product. Please try again.')
+    }
   }
 
   const resetForm = () => {
@@ -146,7 +253,16 @@ export default function ProductsPage() {
       stock: ''
     })
     setFormErrors({})
+    setSubmitError('')
+    setImageFile(null)
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+    previewUrlRef.current = null
+    setImagePreview(null)
+    if (imageInputRef.current) imageInputRef.current.value = ''
   }
+
+  const getProductImageSrc = (image: string) =>
+    image.startsWith('http') ? image : `http://localhost:3000${image}`
 
   return (
     <div>
@@ -223,9 +339,17 @@ export default function ProductsPage() {
               {products.map((product) => (
                 <TableRow key={product.id} id={product.id}>
                   <TableCell>
-                    <div className='w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400'>
-                      No img
-                    </div>
+                    {product.image ? (
+                      <img
+                        src={getProductImageSrc(product.image)}
+                        alt={product.name}
+                        className='w-12 h-12 rounded-lg object-cover bg-gray-100'
+                      />
+                    ) : (
+                      <div className='w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400'>
+                        No img
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className='font-medium text-gray-900'>
@@ -342,13 +466,13 @@ export default function ProductsPage() {
                     <input
                       type='text'
                       placeholder='Product name'
-                      className={inputCls}
+                      className={formErrors.name ? inputErrCls : inputCls}
                       value={form.name}
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, name: e.target.value }))
                       }
                     />
-                    <p className='text-xs text-red-500'>Error message</p>
+                    {formErrors.name && <p className='text-xs text-red-500'>{formErrors.name}</p>}
                   </div>
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium text-gray-700'>
@@ -356,17 +480,34 @@ export default function ProductsPage() {
                     </label>
                     <input
                       type='file'
-                      placeholder='Upload image'
-                      className={inputCls}
+                      ref={imageInputRef}
+                      className={formErrors.image ? inputErrCls : inputCls}
                       accept='image/*'
+                      onChange={handleImageChange}
                     />
-                    <p className='text-xs text-red-500'>Error message</p>
-                    <div>
+                    {formErrors.image && <p className='text-xs text-red-500'>{formErrors.image}</p>}
+                    {imagePreview && (
+                      <div className='flex items-start gap-3'>
                       <img
+                        src={imagePreview}
                         alt='Preview'
                         className='w-[150px] h-[150px] rounded-lg object-cover'
                       />
-                    </div>
+                        <Button
+                          size='sm'
+                          variant='ghost'
+                          onPress={() => {
+                            setImageFile(null)
+                            if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+                            previewUrlRef.current = null
+                            setImagePreview(null)
+                            if (imageInputRef.current) imageInputRef.current.value = ''
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium text-gray-700'>
@@ -384,7 +525,6 @@ export default function ProductsPage() {
                         }))
                       }
                     />
-                    <p className='text-xs text-red-500'>Error message</p>
                   </div>
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium text-gray-700'>
@@ -393,13 +533,13 @@ export default function ProductsPage() {
                     <input
                       type='number'
                       placeholder='0.00'
-                      className={inputCls}
+                      className={formErrors.price ? inputErrCls : inputCls}
                       value={form.price}
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, price: e.target.value }))
                       }
                     />
-                    <p className='text-xs text-red-500'>Error message</p>
+                    {formErrors.price && <p className='text-xs text-red-500'>{formErrors.price}</p>}
                   </div>
                   <div className='flex flex-col gap-1'>
                     <label className='text-sm font-medium text-gray-700'>
@@ -408,14 +548,15 @@ export default function ProductsPage() {
                     <input
                       type='number'
                       placeholder='0'
-                      className={inputCls}
+                      className={formErrors.stock ? inputErrCls : inputCls}
                       value={form.stock}
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, stock: e.target.value }))
                       }
                     />
-                    <p className='text-xs text-red-500'>Error message</p>
+                    {formErrors.stock && <p className='text-xs text-red-500'>{formErrors.stock}</p>}
                   </div>
+                  {submitError && <p className='text-sm text-red-600'>{submitError}</p>}
                 </div>
               </ModalBody>
               <ModalFooter>
@@ -428,8 +569,12 @@ export default function ProductsPage() {
                 >
                   Cancel
                 </Button>
-                <Button variant='primary' onPress={handleCreateProduct}>
-                  Create Product
+                <Button
+                  variant='primary'
+                  isDisabled={createProductMutation.isPending}
+                  onPress={handleCreateProduct}
+                >
+                  {createProductMutation.isPending ? 'Creating...' : 'Create Product'}
                 </Button>
               </ModalFooter>
             </ModalDialog>

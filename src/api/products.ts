@@ -9,11 +9,12 @@ export interface ProductsQuery {
   order?: 'asc' | 'desc'
 }
 
-interface CreateProductBody {
+export interface CreateProductBody {
   name: string
   price: number
   stock?: number
   description?: string
+  image?: string
 }
 
 export const productsApi = {
@@ -28,5 +29,15 @@ export const productsApi = {
       {}
     )
     return data.data
+  },
+  uploadProductImage: async (image: File) => {
+    const formData = new FormData()
+    formData.append('image', image)
+    const { data } = await http.post<{ data: { image: string } }>(
+      '/products/image',
+      formData,
+      { headers: { 'Content-Type': undefined } }
+    )
+    return data.data.image
   }
 }
