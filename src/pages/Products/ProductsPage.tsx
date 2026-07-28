@@ -18,7 +18,8 @@ import {
   ModalHeading,
   ModalBody,
   ModalFooter,
-  useOverlayState
+  useOverlayState,
+  buttonVariants
 } from '@heroui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -26,7 +27,7 @@ import {
   type CreateProductBody,
   type ProductsQuery
 } from '../../api/products'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { useRef, useState } from 'react'
 
 const SORT_OPTIONS = [
@@ -320,9 +321,16 @@ export default function ProductsPage() {
                   </TableCell>
                   <TableCell>
                     <div className='flex gap-2'>
-                      <Button size='sm' variant='secondary'>
+                      <Link
+                        to={`/products/${product.id}`}
+                        className={buttonVariants({
+                          size: 'sm',
+                          variant: 'secondary'
+                        })}
+                      >
                         View
-                      </Button>
+                      </Link>
+
                       <Button size='sm' variant='danger-soft'>
                         Delete
                       </Button>

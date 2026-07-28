@@ -22,6 +22,18 @@ export const productsApi = {
     const { data } = await http.get<ProductsResponse>('/products', { params })
     return data
   },
+  getProductById: async (id: number) => {
+    const { data } = await http.get<{ data: Product }>(`/products/${id}`)
+    return data.data
+  },
+  updateProduct: async (id: number, product: Partial<CreateProductBody>) => {
+    const { data } = await http.put<{ data: Product }>(
+      `/products/${id}`,
+      product
+    )
+    return data.data
+  },
+  deleteProduct: (id: number) => http.delete(`/products/${id}`),
   createProduct: async (product: CreateProductBody) => {
     const { data } = await http.post<{ data: Product }>(
       '/products',
