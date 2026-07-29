@@ -19,7 +19,8 @@ import {
   ModalBody,
   ModalFooter,
   useOverlayState,
-  buttonVariants
+  buttonVariants,
+  AlertDialog
 } from '@heroui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -89,6 +90,13 @@ export default function ProductsPage() {
 
   const uploadImageMutation = useMutation({
     mutationFn: productsApi.uploadProductImage
+  })
+
+  const deleteProductMutation = useMutation({
+    mutationFn: productsApi.deleteProduct,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+    }
   })
 
   const products = data?.data ?? []
@@ -196,6 +204,10 @@ export default function ProductsPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
     setImageFile(file)
+  }
+
+  const handleDeleteProduct = (id: number) => {
+    deleteProductMutation.mutateAsync(id)
   }
   return (
     <div>
@@ -331,9 +343,42 @@ export default function ProductsPage() {
                         View
                       </Link>
 
-                      <Button size='sm' variant='danger-soft'>
-                        Delete
-                      </Button>
+                      <AlertDialog>
+                        <Button variant='danger-soft'>Delete</Button>
+                        <AlertDialog.Backdrop>
+                          <AlertDialog.Container>
+                            <AlertDialog.Dialog className='sm:max-w-[400px]'>
+                              <AlertDialog.CloseTrigger />
+                              <AlertDialog.Header>
+                                <AlertDialog.Icon status='danger' />
+                                <AlertDialog.Heading>
+                                  Delete Product
+                                </AlertDialog.Heading>
+                              </AlertDialog.Header>
+                              <AlertDialog.Body>
+                                <p>
+                                  Are you sure you want to delete {product.name}
+                                  ? This action cannot be undone.
+                                </p>
+                              </AlertDialog.Body>
+                              <AlertDialog.Footer>
+                                <Button slot='close' variant='tertiary'>
+                                  Cancel
+                                </Button>
+                                <Button
+                                  slot='close'
+                                  variant='danger'
+                                  onPress={() =>
+                                    handleDeleteProduct(product.id)
+                                  }
+                                >
+                                  Delete Product
+                                </Button>
+                              </AlertDialog.Footer>
+                            </AlertDialog.Dialog>
+                          </AlertDialog.Container>
+                        </AlertDialog.Backdrop>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>

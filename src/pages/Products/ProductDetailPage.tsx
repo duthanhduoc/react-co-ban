@@ -15,21 +15,54 @@ import {
   Spinner,
   useOverlayState
 } from '@heroui/react'
-import { mockProducts } from '../../data/products'
-import { useQuery } from '@tanstack/react-query'
-import { productsApi } from '../../api/products'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { productsApi, type UpdateProductBody } from '../../api/products'
+import { useRef } from 'react'
 
 const inputCls =
   'border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 w-full'
 
 export default function ProductDetailPage() {
-  // const navigate = useNavigate()
+  const navigate = useNavigate()
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const qc = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const editState = useOverlayState()
   const { data: product } = useQuery({
     queryKey: ['products', id],
     queryFn: () => productsApi.getProductById(Number(id))
   })
+
+  const uploadImageMutation = useMutation({
+    mutationFn: productsApi.uploadProductImage
+  })
+
+  const updateProductMutation = useMutation({
+    mutationFn: (data: UpdateProductBody) =>
+      productsApi.updateProduct(Number(id), data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products', id] })
+    }
+  })
+  const deleteProductMutation = useMutation({
+    mutationFn: () => productsApi.deleteProduct(Number(id)),
+    onSuccess: () => {
+      navigate('/products')
+    }
+  })
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const imageUrl = await uploadImageMutation.mutateAsync(file)
+      await updateProductMutation.mutateAsync({ image: imageUrl })
+    }
+    e.target.value = '' // Reset the input value to allow re-uploading the same file if needed
+  }
+
+  const handleDeleteProduct = () => {
+    deleteProductMutation.mutateAsync()
+  }
 
   if (!product) {
     return (
@@ -75,7 +108,11 @@ export default function ProductDetailPage() {
                       <Button slot='close' variant='tertiary'>
                         Cancel
                       </Button>
-                      <Button slot='close' variant='danger'>
+                      <Button
+                        slot='close'
+                        variant='danger'
+                        onPress={handleDeleteProduct}
+                      >
                         Delete Product
                       </Button>
                     </AlertDialog.Footer>
@@ -91,9 +128,25 @@ export default function ProductDetailPage() {
           <Card>
             <Card.Header className='flex justify-between items-center px-6 pt-6 pb-2'>
               <h2 className='text-lg font-semibold'>Product Image</h2>
-              <Button size='sm' variant='secondary'>
-                Upload Image
+              <Button
+                size='sm'
+                variant='secondary'
+                onPress={() => imageInputRef.current?.click()}
+              >
+                {uploadImageMutation.isPending
+                  ? 'Uploading...'
+                  : product.image
+                    ? 'Change Image'
+                    : 'Upload Image'}
               </Button>
+              <input
+                type='file'
+                placeholder='Upload image'
+                className='hidden'
+                accept='image/*'
+                ref={imageInputRef}
+                onChange={handleImageChange}
+              />
             </Card.Header>
             <Card.Content className='px-6 pb-6'>
               {product.image ? (

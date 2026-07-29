@@ -17,6 +17,8 @@ export interface CreateProductBody {
   image?: string
 }
 
+export type UpdateProductBody = Partial<CreateProductBody>
+
 export const productsApi = {
   getProducts: async (params: ProductsQuery = {}) => {
     const { data } = await http.get<ProductsResponse>('/products', { params })
@@ -26,7 +28,7 @@ export const productsApi = {
     const { data } = await http.get<{ data: Product }>(`/products/${id}`)
     return data.data
   },
-  updateProduct: async (id: number, product: Partial<CreateProductBody>) => {
+  updateProduct: async (id: number, product: UpdateProductBody) => {
     const { data } = await http.put<{ data: Product }>(
       `/products/${id}`,
       product
