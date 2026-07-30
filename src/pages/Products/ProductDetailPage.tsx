@@ -17,10 +17,29 @@ import {
 } from '@heroui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { productsApi, type UpdateProductBody } from '../../api/products'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
+import { z } from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { isAxiosError } from 'axios'
 
 const inputCls =
   'border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 w-full'
+const inputErrCls =
+  'border border-red-400 bg-red-50 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-red-400 w-full'
+
+const editProductSchema = z.object({
+  name: z.string().trim().optional(),
+  description: z.string().trim().optional(),
+  price: z.coerce.number().min(0, 'Price must be a positive number').optional(),
+  stock: z.coerce
+    .number()
+    .int('Stock must be a whole number')
+    .min(0, 'Stock must be a positive number')
+    .optional()
+})
+
+type EditProductForm = z.infer<typeof editProductSchema>
 
 export default function ProductDetailPage() {
   const navigate = useNavigate()
@@ -28,6 +47,21 @@ export default function ProductDetailPage() {
   const qc = useQueryClient()
   const { id } = useParams<{ id: string }>()
   const editState = useOverlayState()
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+    setError
+  } = useForm({
+    resolver: zodResolver(editProductSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      price: 0,
+      stock: 0
+    }
+  })
   const { data: product } = useQuery({
     queryKey: ['products', id],
     queryFn: () => productsApi.getProductById(Number(id))
@@ -51,6 +85,17 @@ export default function ProductDetailPage() {
     }
   })
 
+  useEffect(() => {
+    if (product) {
+      reset({
+        name: product.name,
+        description: product.description ?? '',
+        price: product.price,
+        stock: product.stock
+      })
+    }
+  }, [product, reset])
+
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -62,6 +107,45 @@ export default function ProductDetailPage() {
 
   const handleDeleteProduct = () => {
     deleteProductMutation.mutateAsync()
+  }
+
+  const handleUpdateProduct = async (values: EditProductForm) => {
+    try {
+      await updateProductMutation.mutateAsync(values)
+      editState.close()
+    } catch (error) {
+      if (
+        isAxiosError<{ errors?: Record<string, string>; error?: string }>(error)
+      ) {
+        const apiErrors = error.response?.data.errors
+        const apiError = error.response?.data.error
+        if (apiErrors) {
+          Object.entries(apiErrors).forEach(([field, message]) => {
+            if (field in editProductSchema.shape) {
+              setError(field as keyof EditProductForm, {
+                type: 'sever',
+                message
+              })
+            }
+          })
+          return
+        }
+        setError('root', {
+          type: 'sever',
+          message: apiError ?? 'Unable to update the product. Please try again.'
+        })
+      } else {
+        setError('root', {
+          type: 'sever',
+          message: 'Unable to update the product. Please try again.'
+        })
+      }
+    }
+  }
+
+  const handleCancelEdit = () => {
+    editState.close()
+    reset()
   }
 
   if (!product) {
@@ -253,54 +337,107 @@ export default function ProductDetailPage() {
                     <ModalHeading>Edit Product</ModalHeading>
                   </ModalHeader>
                   <ModalBody>
-                    <div className='flex flex-col gap-4'>
+                    <form
+                      className='flex flex-col gap-4'
+                      noValidate
+                      onSubmit={handleSubmit(handleUpdateProduct, (e) => {
+                        console.log(e)
+                      })}
+                    >
                       <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium text-gray-700'>
+                        <label
+                          htmlFor='edit-product-name'
+                          className='text-sm font-medium text-gray-700'
+                        >
                           Name
                         </label>
                         <input
+                          id='edit-product-name'
                           type='text'
-                          defaultValue={product.name}
-                          className={inputCls}
+                          className={errors.name ? inputErrCls : inputCls}
+                          {...register('name')}
                         />
+                        {errors.name && (
+                          <p className='text-xs text-red-500'>
+                            {errors.name.message}
+                          </p>
+                        )}
                       </div>
                       <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium text-gray-700'>
+                        <label
+                          htmlFor='edit-product-description'
+                          className='text-sm font-medium text-gray-700'
+                        >
                           Description
                         </label>
                         <textarea
-                          defaultValue={product.description ?? ''}
+                          id='edit-product-description'
                           rows={3}
                           className='border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 w-full resize-none'
+                          {...register('description')}
                         />
+                        {errors.description && (
+                          <p className='text-xs text-red-500'>
+                            {errors.description.message}
+                          </p>
+                        )}
                       </div>
                       <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium text-gray-700'>
+                        <label
+                          htmlFor='edit-product-price'
+                          className='text-sm font-medium text-gray-700'
+                        >
                           Price
                         </label>
                         <input
+                          id='edit-product-price'
                           type='number'
-                          defaultValue={product.price}
-                          className={inputCls}
+                          className={errors.price ? inputErrCls : inputCls}
+                          {...register('price')}
                         />
+                        {errors.price && (
+                          <p className='text-xs text-red-500'>
+                            {errors.price.message}
+                          </p>
+                        )}
                       </div>
                       <div className='flex flex-col gap-1'>
-                        <label className='text-sm font-medium text-gray-700'>
+                        <label
+                          htmlFor='edit-product-stock'
+                          className='text-sm font-medium text-gray-700'
+                        >
                           Stock
                         </label>
                         <input
+                          id='edit-product-stock'
                           type='number'
-                          defaultValue={product.stock}
-                          className={inputCls}
+                          className={errors.stock ? inputErrCls : inputCls}
+                          {...register('stock')}
                         />
+                        {errors.stock && (
+                          <p className='text-xs text-red-500'>
+                            {errors.stock.message}
+                          </p>
+                        )}
                       </div>
+                      {errors.root && (
+                        <p className='text-xs text-red-500'>
+                          {errors.root.message}
+                        </p>
+                      )}
                       <div className='flex justify-end gap-2'>
-                        <Button variant='ghost' onPress={editState.close}>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          onPress={handleCancelEdit}
+                        >
                           Cancel
                         </Button>
-                        <Button variant='primary'>Save Changes</Button>
+                        <Button type='submit' variant='primary'>
+                          Save Changes
+                        </Button>
                       </div>
-                    </div>
+                    </form>
                   </ModalBody>
                 </ModalDialog>
               </ModalContainer>
